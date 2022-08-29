@@ -1,6 +1,3 @@
-use economy::accounting::bank::*;
-use economy::actor::Actor;
-
 use femtovg::{Color, LineCap, LineJoin, Paint, Path};
 use nalgebra_glm::Vec2;
 use powder::Powder;
@@ -15,19 +12,19 @@ fn main() {
     //println!("{:?}", account_a.borrow().bank.upgrade().unwrap().borrow());
 
     let compute_thread = thread::spawn(|| {
-        let bank = FederalReserve::new("Washington");
-        let mut actors = vec![
-            Actor::new("Actor_1", bank.clone()),
-            Actor::new("Actor_2", bank.clone()),
-            Actor::new("Actor_3", bank.clone()),
-            Actor::new("Actor_4", bank.clone()),
-        ];
-        loop {
-            for actor in actors.iter_mut() {
-                actor.tick();
-            }
-            thread::sleep_ms(1000);
-        }
+        //let bank = FederalReserve::new("Washington");
+        //let mut actors = vec![
+        //Actor::new("Actor_1", bank.clone()),
+        //Actor::new("Actor_2", bank.clone()),
+        //Actor::new("Actor_3", bank.clone()),
+        //Actor::new("Actor_4", bank.clone()),
+        //];
+        //loop {
+        //for actor in actors.iter_mut() {
+        //actor.tick();
+        //}
+        //thread::sleep_ms(1000);
+        //}
     });
 
     // Graphical Rendering

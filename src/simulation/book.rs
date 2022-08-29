@@ -1,4 +1,4 @@
-use crate::recipe::Recipe;
+use super::recipe::Recipe;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Book {
