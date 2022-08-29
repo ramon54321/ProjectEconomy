@@ -6,14 +6,16 @@ use std::{
 
 pub struct Bank {
     weak_self: Weak<RefCell<Bank>>,
+    name: String,
     accounts: Vec<Rc<RefCell<Account>>>,
     loans: Vec<Rc<RefCell<Loan>>>,
 }
 impl Bank {
-    pub fn new() -> Rc<RefCell<Bank>> {
+    pub fn new(name: &str) -> Rc<RefCell<Bank>> {
         Rc::new_cyclic(|bank_weak| {
             RefCell::new(Self {
                 weak_self: bank_weak.clone(),
+                name: name.to_string(),
                 accounts: Vec::new(),
                 loans: Vec::new(),
             })
@@ -44,7 +46,7 @@ mod tests {
 
     #[test]
     fn open_account() {
-        let bank = Bank::new();
+        let bank = Bank::new("Federal Reserve");
         let account = bank.borrow_mut().open_account("Jeff");
         assert_eq!(
             account.upgrade().unwrap().borrow().get_name(),
@@ -55,7 +57,7 @@ mod tests {
 
     #[test]
     fn issue_loan() {
-        let bank = Bank::new();
+        let bank = Bank::new("Federal Reserve");
         let account = bank.borrow_mut().open_account("Jeff");
         let loan = bank.borrow_mut().issue_loan(account, 500);
         assert!(loan.is_some());

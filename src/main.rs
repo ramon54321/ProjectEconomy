@@ -1,33 +1,14 @@
+use economy::simulation::simulate;
 use femtovg::{Color, LineCap, LineJoin, Paint, Path};
 use nalgebra_glm::Vec2;
 use powder::Powder;
 use std::thread;
 
 fn main() {
-    //let account_a = bank.borrow_mut().open_account(bank.clone(), "Johnny");
-    //let account_b = bank.borrow_mut().open_account(bank.clone(), "Jill");
+    // Simulation
+    let simulation_thread = thread::spawn(simulate);
 
-    //bank.borrow_mut()
-    //.transfer(account_a.clone(), account_b.clone(), 500);
-    //println!("{:?}", account_a.borrow().bank.upgrade().unwrap().borrow());
-
-    let compute_thread = thread::spawn(|| {
-        //let bank = FederalReserve::new("Washington");
-        //let mut actors = vec![
-        //Actor::new("Actor_1", bank.clone()),
-        //Actor::new("Actor_2", bank.clone()),
-        //Actor::new("Actor_3", bank.clone()),
-        //Actor::new("Actor_4", bank.clone()),
-        //];
-        //loop {
-        //for actor in actors.iter_mut() {
-        //actor.tick();
-        //}
-        //thread::sleep_ms(1000);
-        //}
-    });
-
-    // Graphical Rendering
+    // Graphics
     let state = State {
         banks: vec![Vec2::new(342.0, 481.0), Vec2::new(612.0, 133.0)],
     };
