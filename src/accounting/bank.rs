@@ -1,8 +1,16 @@
-use crate::account::Account;
-use crate::transaction::Transaction;
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use crate::accounting::account::Account;
+use crate::accounting::loan::Loan;
+use crate::accounting::transaction::Transaction;
+use std::{
+    cell::RefCell,
+    fmt::Debug,
+    rc::{Rc, Weak},
+};
+
+use super::transaction;
 
 pub trait Bank: Debug {
+    fn get_treasury_account(&self) -> Rc<RefCell<Account>>;
     fn transfer(
         &mut self,
         a: Rc<RefCell<Account>>,
@@ -10,34 +18,41 @@ pub trait Bank: Debug {
         amount: u64,
     ) -> Rc<RefCell<Transaction>>;
     fn open_account(&mut self, bank: Rc<RefCell<dyn Bank>>, name: &str) -> Rc<RefCell<Account>>;
+    fn issue_loan(
+        &mut self,
+        bank: Rc<RefCell<dyn Bank>>,
+        account: Rc<RefCell<Account>>,
+        amount: u64,
+    ) -> Rc<RefCell<Loan>>;
 }
 
 pub struct FederalReserve {
     name: String,
+    treasury: Rc<RefCell<Account>>,
     accounts: Vec<Rc<RefCell<Account>>>,
     transactions: Vec<Rc<RefCell<Transaction>>>,
 }
 impl FederalReserve {
     pub fn new(name: &str) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(FederalReserve {
-            name: name.to_string(),
-            accounts: Vec::new(),
-            transactions: Vec::new(),
-        }))
+        let bank = Rc::new_cyclic(|bank| {
+            RefCell::new(FederalReserve {
+                name: name.to_string(),
+                treasury: Rc::new(RefCell::new(Account::new("Treasury", bank.clone()))),
+                accounts: Vec::new(),
+                transactions: Vec::new(),
+            })
+        });
     }
 }
 impl Bank for FederalReserve {
+    fn get_treasury_account(&self) -> Rc<RefCell<Account>> {}
     fn transfer(
         &mut self,
         a: Rc<RefCell<Account>>,
         b: Rc<RefCell<Account>>,
         amount: u64,
     ) -> Rc<RefCell<Transaction>> {
-        let transaction = Rc::new(RefCell::new(Transaction {
-            from: a.clone(),
-            to: b.clone(),
-            amount,
-        }));
+        let transaction = Transaction::new(a.clone(), b.clone(), amount);
         a.borrow_mut().add_transaction(transaction.clone());
         b.borrow_mut().add_transaction(transaction.clone());
         self.transactions.push(transaction.clone());
@@ -47,6 +62,16 @@ impl Bank for FederalReserve {
         let account = Account::new(name, bank);
         self.accounts.push(account.clone());
         account
+    }
+    fn issue_loan(
+        &mut self,
+        bank: Rc<RefCell<dyn Bank>>,
+        account: Rc<RefCell<Account>>,
+        amount: u64,
+    ) -> Rc<RefCell<Loan>> {
+        let loan = Loan::new(bank, account.clone(), amount);
+        account.borrow_mut().add_loan(loan.clone());
+        loan
     }
 }
 impl Debug for FederalReserve {
