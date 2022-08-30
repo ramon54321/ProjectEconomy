@@ -16,7 +16,6 @@ pub struct Actor {
 impl Actor {
     pub(super) fn new(name: &str, bank: Rc<RefCell<Bank>>) -> Self {
         let account = bank.borrow_mut().open_account(name);
-        bank.borrow_mut().issue_loan(account.clone(), 500);
         Self {
             name: name.to_string(),
             account,
