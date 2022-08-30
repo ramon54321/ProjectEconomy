@@ -3,6 +3,7 @@ use actor::Actor;
 use std::thread;
 
 pub mod accounting;
+pub mod actions;
 pub mod actor;
 pub mod book;
 pub mod recipe;
