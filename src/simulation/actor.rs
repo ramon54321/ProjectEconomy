@@ -1,6 +1,6 @@
 use super::{
     accounting::{account::Account, bank::Bank},
-    actions::{chat_action::ChatAction, Action, ActionPayload, ActionResult},
+    actions::{idle_action::IdleAction, Action, ActionPayload, ActionResult},
     book::Book,
     store::Store,
 };
@@ -25,7 +25,7 @@ impl Actor {
             account,
             book: Book::new(),
             store: Store::new(),
-            action: Box::new(ChatAction::new()),
+            action: Box::new(IdleAction::new()),
         }
     }
     ///
@@ -45,11 +45,6 @@ impl Actor {
             ActionResult::InProgress => (),
             ActionResult::Done(next_action) => self.action = next_action,
         };
-        // What do I have
-        // What do I need
-        // What do I want
-        // How am I going to get it
-        // Do it
     }
 }
 

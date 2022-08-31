@@ -1,7 +1,7 @@
 use super::{accounting::account::Account, book::Book, store::Store};
 use std::{cell::RefCell, rc::Weak};
 
-pub(super) mod chat_action;
+pub(super) mod idle_action;
 
 pub(super) enum ActionResult {
     InProgress,
