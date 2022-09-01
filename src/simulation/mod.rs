@@ -1,5 +1,5 @@
 use self::market::Market;
-use crate::State;
+use crate::RenderableState;
 use accounting::bank::Bank;
 use actor::Actor;
 use nalgebra_glm::Vec2;
@@ -16,7 +16,7 @@ pub mod store;
 ///
 /// Runs in own thread. Responsible for simulation.
 ///
-pub fn simulate(tx: Sender<State>) {
+pub fn simulate(tx: Sender<RenderableState>) {
     let mut market = Market::new();
     let bank = Bank::new("Federal Reserve");
     let mut actors = vec![
@@ -29,10 +29,10 @@ pub fn simulate(tx: Sender<State>) {
         for actor in actors.iter_mut() {
             actor.tick(&mut market);
         }
-        let state = State {
+        let renderable_state = RenderableState {
             banks: vec![Vec2::new(1042.0, 481.0), Vec2::new(1012.0, 133.0)],
         };
-        tx.send(state).unwrap();
+        tx.send(renderable_state).unwrap();
         thread::sleep_ms(1000);
     }
 }

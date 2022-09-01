@@ -1,11 +1,11 @@
-use crate::State;
+use crate::RenderableState;
 use femtovg::{Baseline, Color, LineCap, LineJoin, Paint, Path};
 use nalgebra_glm::Vec2;
 use powder::Powder;
 use std::sync::mpsc::Receiver;
 
-pub fn render(rx: Receiver<State>) {
-    let initial_state = State {
+pub fn render(rx: Receiver<RenderableState>) {
+    let initial_state = RenderableState {
         banks: vec![Vec2::new(342.0, 481.0), Vec2::new(612.0, 133.0)],
     };
     let mut powder = Powder::new(initial_state).expect("Could not start powder");
