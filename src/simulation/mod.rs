@@ -2,10 +2,13 @@ use accounting::bank::Bank;
 use actor::Actor;
 use std::thread;
 
+use self::market::Market;
+
 pub mod accounting;
 pub mod actions;
 pub mod actor;
 pub mod book;
+pub mod market;
 pub mod recipe;
 pub mod store;
 
@@ -13,6 +16,7 @@ pub mod store;
 /// Runs in own thread. Responsible for simulation.
 ///
 pub fn simulate() {
+    let market = Market::new();
     let bank = Bank::new("Federal Reserve");
     let mut actors = vec![
         Actor::new("Actor_1", bank.clone()),
