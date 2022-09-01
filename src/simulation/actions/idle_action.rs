@@ -16,6 +16,8 @@ impl Action for IdleAction {
         // How am I going to get it
         // Do it
 
+        payload.store.add("ABC", 2);
+
         ActionResult::InProgress
     }
 }

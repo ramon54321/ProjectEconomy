@@ -2,6 +2,7 @@ use super::{
     accounting::{account::Account, bank::Bank},
     actions::{idle_action::IdleAction, Action, ActionPayload, ActionResult},
     book::Book,
+    market::Market,
     store::Store,
 };
 use std::{
@@ -34,12 +35,13 @@ impl Actor {
     /// containing the next action. This tick method is responsible for replacing the old action
     /// with the newly returned action in preparation for the next call to this tick method.
     ///
-    pub(super) fn tick(&mut self) {
+    pub(super) fn tick(&mut self, market: &mut Market) {
         let action_result = self.action.tick(ActionPayload {
-            name: &self.name,
-            account: &self.account,
-            book: &self.book,
-            store: &self.store,
+            name: &mut self.name,
+            account: &mut self.account,
+            book: &mut self.book,
+            store: &mut self.store,
+            market,
         });
         match action_result {
             ActionResult::InProgress => (),
