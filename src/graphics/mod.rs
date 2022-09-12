@@ -1,40 +1,50 @@
+use self::layers::{basic_info::render_basic_info, market_listings::render_market_listings};
 use crate::RenderableState;
-use femtovg::{Baseline, Color, LineCap, LineJoin, Paint, Path};
-use nalgebra_glm::Vec2;
-use powder::Powder;
+use femtovg::FontId;
+use powder::{Powder, RenderLayerFn};
 use std::sync::mpsc::Receiver;
 
+mod layers;
+
+pub struct PowderState {
+    renderable_state: RenderableState,
+    font: Option<FontId>,
+}
+impl Default for PowderState {
+    fn default() -> Self {
+        Self {
+            renderable_state: Default::default(),
+            font: None,
+        }
+    }
+}
+
 pub fn render(rx: Receiver<RenderableState>) {
-    let initial_state = RenderableState {
-        banks: vec![Vec2::new(342.0, 481.0), Vec2::new(612.0, 133.0)],
-    };
-    let mut powder = Powder::new(initial_state).expect("Could not start powder");
-    let roboto_regular = powder.load_font("assets/Roboto-Regular.ttf");
-    powder.push(Box::new(move |canvas, meta, state| {
+    // Define layers for powder renderer
+    let layers: Vec<RenderLayerFn<PowderState>> = vec![
+        Box::new(render_basic_info),
+        Box::new(render_market_listings),
+    ];
+
+    // Setup powder instance with initial state
+    let mut powder = Powder::new(PowderState::default()).expect("Could not start powder");
+
+    // Load after-init assets
+    powder.state.font = Some(powder.load_font("assets/Roboto-Regular.ttf"));
+
+    // Push thread receiver layer
+    powder.push(Box::new(move |_canvas, _meta, state| {
         match rx.try_recv() {
-            Ok(new_state) => *state = new_state,
+            Ok(new_renderable_state) => state.renderable_state = new_renderable_state,
             _ => (),
         };
     }));
-    powder.push(Box::new(move |canvas, meta, state| {
-        let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
-        paint.set_line_cap(LineCap::Butt);
-        paint.set_line_join(LineJoin::Bevel);
-        paint.set_line_width(1.0);
 
-        let mut path = Path::new();
-        for bank in state.banks.iter() {
-            path.circle(bank.x, bank.y, 10.0);
-        }
+    // Push custom layers
+    for layer in layers {
+        powder.push(layer);
+    }
 
-        let mut text_paint = Paint::color(Color::rgba(255, 255, 255, 128));
-        text_paint.set_font_size(28.0);
-        text_paint.set_font(&[roboto_regular]);
-        //text_paint.set_text_align(Align::Left);
-        text_paint.set_text_baseline(Baseline::Middle);
-        let _ = canvas.fill_text(50.0, 50.0, "Hello, world!", text_paint);
-
-        canvas.fill_path(&mut path, paint);
-    }));
+    // Start graphics
     powder.start();
 }

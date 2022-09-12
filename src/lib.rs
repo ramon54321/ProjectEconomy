@@ -1,8 +1,8 @@
-use nalgebra_glm::Vec2;
-
 pub mod graphics;
 pub mod simulation;
 
+#[derive(Default)]
 pub struct RenderableState {
-    pub banks: Vec<Vec2>,
+    pub actor_count: usize,
+    pub listed_item_kinds: Vec<(String, usize)>,
 }

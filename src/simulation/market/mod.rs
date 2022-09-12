@@ -49,6 +49,12 @@ impl Market {
         listings_of_item_kind.retain(|l| l.id != listing.id);
     }
     ///
+    /// Get an iterator over each item kind present in the listing map.
+    ///
+    pub(super) fn get_listed_item_kinds(&self) -> impl Iterator<Item = &String> {
+        self.listings_by_item_kind.keys()
+    }
+    ///
     /// Get a Vec of Weak references to listings for items of the given kind. There are no
     /// guarentees the Weak references stay valid at any point after the call to this method.
     ///
