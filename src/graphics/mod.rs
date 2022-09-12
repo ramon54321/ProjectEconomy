@@ -2,18 +2,21 @@ use self::layers::{basic_info::render_basic_info, market_listings::render_market
 use crate::RenderableState;
 use femtovg::FontId;
 use powder::{Powder, RenderLayerFn};
-use std::sync::mpsc::Receiver;
+use std::{collections::HashMap, sync::mpsc::Receiver};
 
+mod components;
 mod layers;
 
 pub struct PowderState {
     renderable_state: RenderableState,
+    dynamic_state: HashMap<String, String>,
     font: Option<FontId>,
 }
 impl Default for PowderState {
     fn default() -> Self {
         Self {
             renderable_state: Default::default(),
+            dynamic_state: Default::default(),
             font: None,
         }
     }

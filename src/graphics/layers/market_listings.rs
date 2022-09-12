@@ -1,19 +1,32 @@
-use crate::graphics::PowderState;
-use femtovg::{renderer::OpenGl, Align, Baseline, Canvas, Color, LineCap, LineJoin, Paint, Path};
+use crate::graphics::{
+    components::{draw_button, draw_horizontal_slider},
+    PowderState,
+};
+use femtovg::{renderer::OpenGl, Align, Baseline, Canvas, Color, LineCap, LineJoin, Paint};
 use powder::Meta;
 
 pub fn render_market_listings(
     canvas: &mut Canvas<OpenGl>,
-    _meta: &mut Meta,
+    meta: &mut Meta,
     state: &mut PowderState,
 ) {
+    let x = 200.0;
+    let y = 15.0;
+    let tab_width = 120.0;
+    let tab_height = 32.0;
+
+    render_tabs(canvas, meta, state, x, y, tab_width, tab_height);
+
+    let y = y + tab_height + 25.0;
+    let width = 500.0;
+    let text_padding = 15.0;
+
     let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
     paint.set_line_cap(LineCap::Butt);
     paint.set_line_join(LineJoin::Bevel);
     paint.set_line_width(4.0);
     paint.set_font_size(14.0);
     paint.set_font(&[state.font.unwrap()]);
-    paint.set_text_align(Align::Right);
     paint.set_text_baseline(Baseline::Middle);
 
     let maximum_count = state
@@ -28,12 +41,53 @@ pub fn render_market_listings(
     let maximum_count = maximum_count.unwrap();
 
     for (i, (item_kind, count)) in state.renderable_state.listed_item_kinds.iter().enumerate() {
-        let line_length = ((*count as f32) / (maximum_count as f32)) * 800.0;
-        let vertical_offset = 50.0 + i as f32 * 30.0;
-        let _ = canvas.fill_text(250.0, vertical_offset, format!("{}", item_kind), paint);
-        let mut path = Path::new();
-        path.move_to(300.0, vertical_offset);
-        path.line_to(300.0 + line_length, vertical_offset);
-        canvas.stroke_path(&mut path, paint);
+        let x = x + 64.0;
+        let vertical_offset = y + i as f32 * 30.0;
+        paint.set_text_align(Align::Right);
+        let _ = canvas.fill_text(x, vertical_offset, format!("{}", item_kind), paint);
+        draw_horizontal_slider(
+            canvas,
+            x + text_padding,
+            vertical_offset,
+            width,
+            0.0,
+            maximum_count as f32,
+            *count as f32,
+        );
+        paint.set_text_align(Align::Left);
+        let _ = canvas.fill_text(
+            x + text_padding * 2.0 + width,
+            vertical_offset,
+            format!("{}", count),
+            paint,
+        );
+    }
+}
+
+fn render_tabs(
+    canvas: &mut Canvas<OpenGl>,
+    meta: &mut Meta,
+    state: &mut PowderState,
+    x: f32,
+    y: f32,
+    tab_width: f32,
+    tab_height: f32,
+) {
+    let tabs = vec!["Listings", "Actors"];
+    for (i, tab) in tabs.iter().enumerate() {
+        if draw_button(
+            canvas,
+            meta,
+            state,
+            x + tab_width * i as f32,
+            y,
+            tab_width,
+            tab_height,
+            tab,
+        ) {
+            state
+                .dynamic_state
+                .insert("market_info_tab".to_string(), tab.to_string());
+        }
     }
 }
