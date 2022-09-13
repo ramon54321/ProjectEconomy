@@ -10,17 +10,63 @@ pub fn render_market_listings(
     meta: &mut Meta,
     state: &mut PowderState,
 ) {
+    // Render tab bar
     let x = 200.0;
     let y = 15.0;
     let tab_width = 120.0;
     let tab_height = 32.0;
-
     render_tabs(canvas, meta, state, x, y, tab_width, tab_height);
 
-    let y = y + tab_height + 25.0;
-    let width = 500.0;
-    let text_padding = 15.0;
+    // Render selected tab
+    let tab = state.dynamic_state.get("market_info_tab");
+    match tab {
+        Some(x) if x == "Actors" => {}
+        _ => {
+            let y = y + tab_height + 25.0;
+            let width = 500.0;
+            let text_padding = 15.0;
+            render_listings(canvas, meta, state, x, y, width, text_padding);
+        }
+    }
+}
 
+fn render_tabs(
+    canvas: &mut Canvas<OpenGl>,
+    meta: &mut Meta,
+    state: &mut PowderState,
+    x: f32,
+    y: f32,
+    tab_width: f32,
+    tab_height: f32,
+) {
+    let tabs = vec!["Listings", "Actors"];
+    for (i, tab) in tabs.iter().enumerate() {
+        if draw_button(
+            canvas,
+            meta,
+            state,
+            x + tab_width * i as f32,
+            y,
+            tab_width,
+            tab_height,
+            tab,
+        ) {
+            state
+                .dynamic_state
+                .insert("market_info_tab".to_string(), tab.to_string());
+        }
+    }
+}
+
+fn render_listings(
+    canvas: &mut Canvas<OpenGl>,
+    _meta: &mut Meta,
+    state: &mut PowderState,
+    x: f32,
+    y: f32,
+    width: f32,
+    text_padding: f32,
+) {
     let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
     paint.set_line_cap(LineCap::Butt);
     paint.set_line_join(LineJoin::Bevel);
@@ -61,33 +107,5 @@ pub fn render_market_listings(
             format!("{}", count),
             paint,
         );
-    }
-}
-
-fn render_tabs(
-    canvas: &mut Canvas<OpenGl>,
-    meta: &mut Meta,
-    state: &mut PowderState,
-    x: f32,
-    y: f32,
-    tab_width: f32,
-    tab_height: f32,
-) {
-    let tabs = vec!["Listings", "Actors"];
-    for (i, tab) in tabs.iter().enumerate() {
-        if draw_button(
-            canvas,
-            meta,
-            state,
-            x + tab_width * i as f32,
-            y,
-            tab_width,
-            tab_height,
-            tab,
-        ) {
-            state
-                .dynamic_state
-                .insert("market_info_tab".to_string(), tab.to_string());
-        }
     }
 }

@@ -1,14 +1,14 @@
 use super::{Action, ActionPayload, ActionResult};
 
-pub struct IdleAction {
+pub struct WorkAction {
     step: u8,
 }
-impl IdleAction {
+impl WorkAction {
     pub fn new() -> Self {
         Self { step: 0 }
     }
 }
-impl Action for IdleAction {
+impl Action for WorkAction {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult {
         // Construct input and output requirements from recipe
         let recipe = String::from("Apple-Food_Packet");
@@ -17,7 +17,7 @@ impl Action for IdleAction {
         let output = recipe_split.next().unwrap();
 
         // Collect input items
-        let input_items = payload.store.take(input, 1);
+        let input_items = payload.store_actual.take(input, 1);
         if input_items == 0 {
             // Get market listings of required item
             let listings_for_input_item = payload.market.get_listings_of_kind(input.clone());
@@ -30,7 +30,7 @@ impl Action for IdleAction {
         }
 
         // Produce output items
-        payload.store.add(output, 1);
+        payload.store_actual.add(output, 1);
 
         ActionResult::InProgress
     }

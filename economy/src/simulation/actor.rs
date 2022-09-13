@@ -1,6 +1,6 @@
 use super::{
     accounting::{account::Account, bank::Bank},
-    actions::{idle_action::IdleAction, Action, ActionPayload, ActionResult},
+    actions::{work_action::WorkAction, Action, ActionPayload, ActionResult},
     book::Book,
     market::Market,
     store::Store,
@@ -15,7 +15,8 @@ pub struct Actor {
     name: String,
     account: Weak<RefCell<Account>>,
     book: Book,
-    store: Store,
+    store_actual: Store,
+    store_target: Store,
     action: Box<dyn Action>,
 }
 impl Actor {
@@ -25,8 +26,9 @@ impl Actor {
             name: name.to_string(),
             account,
             book: Book::new(),
-            store: Store::new(),
-            action: Box::new(IdleAction::new()),
+            store_actual: Store::new(),
+            store_target: Store::new(),
+            action: Box::new(WorkAction::new()),
         }
     }
     ///
@@ -40,7 +42,8 @@ impl Actor {
             name: &mut self.name,
             account: &mut self.account,
             book: &mut self.book,
-            store: &mut self.store,
+            store_actual: &mut self.store_actual,
+            store_target: &mut self.store_target,
             market,
         });
         match action_result {
