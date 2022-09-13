@@ -16,4 +16,5 @@ pub(super) struct ActionPayload<'a> {
 }
 pub(super) trait Action {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult;
+    fn get_name(&self) -> String;
 }

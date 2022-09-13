@@ -61,7 +61,11 @@ impl Market {
     pub(super) fn get_listings_of_kind(&self, kind: &str) -> Vec<Weak<Listing>> {
         match self.listings_by_item_kind.get(kind) {
             None => Vec::new(),
-            Some(listings) => listings.iter().map(|l| Rc::downgrade(&l)).collect(),
+            Some(listings) => {
+                let mut sorted = listings.clone();
+                sorted.sort_by(|a, b| a.price.cmp(&b.price));
+                sorted.iter().map(|l| Rc::downgrade(&l)).collect()
+            }
         }
     }
 }

@@ -10,14 +10,36 @@ impl IdleAction {
 }
 impl Action for IdleAction {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult {
-        // What do I have
-        // What do I need
-        // What do I want
-        // How am I going to get it
-        // Do it
+        // Construct input and output requirements from recipe
+        let recipe = String::from("Apple-Food_Packet");
+        let mut recipe_split = recipe.split("-");
+        let input = recipe_split.next().unwrap();
+        let output = recipe_split.next().unwrap();
 
-        payload.store.add("ABC", 2);
+        // Collect input items
+        let input_items = payload.store.take(input, 1);
+        if input_items == 0 {
+            // Get market listings of required item
+            let listings_for_input_item = payload.market.get_listings_of_kind(input.clone());
+
+            // Purchase cheapest listing
+            // TODO: This does not cost anything, nor does it check amount or success
+            listings_for_input_item
+                .first()
+                .map(|listing| payload.market.unlist_item(listing.clone()));
+        }
+
+        // Produce output items
+        payload.store.add(output, 1);
 
         ActionResult::InProgress
     }
+    fn get_name(&self) -> String {
+        String::from("Idle")
+    }
+}
+
+struct OccupationSpec {
+    //needs: Vec<(String, usize)>,
+    recipe: String,
 }
