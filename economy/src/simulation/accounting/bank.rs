@@ -1,4 +1,4 @@
-use super::{account::Account, loan::Loan};
+use super::{account::Account, loan::Loan, transaction::Transaction};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -9,6 +9,7 @@ pub struct Bank {
     name: String,
     accounts: Vec<Rc<RefCell<Account>>>,
     loans: Vec<Rc<RefCell<Loan>>>,
+    transactions: Vec<Rc<Transaction>>,
 }
 impl Bank {
     pub fn new(name: &str) -> Rc<RefCell<Bank>> {
@@ -18,6 +19,7 @@ impl Bank {
                 name: name.to_string(),
                 accounts: Vec::new(),
                 loans: Vec::new(),
+                transactions: Vec::new(),
             })
         })
     }
@@ -37,6 +39,49 @@ impl Bank {
         self.loans.push(loan);
         account.borrow_mut().add_loan(weak_loan.clone());
         Some(weak_loan)
+    }
+    pub fn process_transaction(
+        from: Weak<RefCell<Account>>,
+        to: Weak<RefCell<Account>>,
+        amount: u64,
+    ) -> bool {
+        let transaction = Transaction::new(from.clone(), to.clone(), amount);
+
+        // Ensure validity of accounts
+        let from_account = from.upgrade();
+        let to_account = to.upgrade();
+        if from_account.is_none() || to_account.is_none() {
+            return false;
+        }
+        let from_account = from_account.unwrap();
+        let to_account = to_account.unwrap();
+
+        // Ensure validity of banks
+        let from_bank = from_account.borrow_mut().get_bank().upgrade();
+        let to_bank = to_account.borrow_mut().get_bank().upgrade();
+        if from_bank.is_none() || to_bank.is_none() {
+            return false;
+        }
+        let from_bank = from_bank.unwrap();
+        let to_bank = to_bank.unwrap();
+
+        // Add strong references to banks
+        from_bank
+            .borrow_mut()
+            .transactions
+            .push(transaction.clone());
+        to_bank.borrow_mut().transactions.push(transaction.clone());
+
+        // Add weak references to accounts
+        from_account
+            .borrow_mut()
+            .add_transaction(Rc::downgrade(&transaction));
+        to_account
+            .borrow_mut()
+            .add_transaction(Rc::downgrade(&transaction));
+
+        // Return success
+        true
     }
 }
 
@@ -62,5 +107,38 @@ mod tests {
         let loan = bank.borrow_mut().issue_loan(account, 500);
         assert!(loan.is_some());
         assert_eq!(loan.unwrap().upgrade().unwrap().borrow().get_due(), 500);
+    }
+
+    #[test]
+    fn process_transaction() {
+        let bank_a = Bank::new("Federal Reserve");
+        let bank_b = Bank::new("Bank of America");
+        let fed_account = bank_a.borrow_mut().open_account("FED");
+        let boa_account = bank_b.borrow_mut().open_account("BOA");
+        let was_transaction_success =
+            Bank::process_transaction(fed_account.clone(), boa_account.clone(), 500);
+        assert!(was_transaction_success);
+        assert_eq!(bank_a.borrow().transactions.len(), 1);
+        assert_eq!(bank_b.borrow().transactions.len(), 1);
+        assert_eq!(fed_account.upgrade().unwrap().borrow().get_balance(), -500);
+        assert_eq!(boa_account.upgrade().unwrap().borrow().get_balance(), 500);
+        assert_eq!(
+            fed_account
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_transactions()
+                .len(),
+            1
+        );
+        assert_eq!(
+            boa_account
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_transactions()
+                .len(),
+            1
+        );
     }
 }

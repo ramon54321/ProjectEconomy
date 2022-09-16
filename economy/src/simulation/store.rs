@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 pub struct Store {
-    items: HashMap<String, u32>,
+    items: HashMap<String, isize>,
 }
 impl Store {
     pub(super) fn new() -> Self {
@@ -22,7 +22,7 @@ impl Store {
     /// Counts the number of items of type 'item' in the store. If no items have been added to the
     /// store, 0 is returned.
     ///
-    pub(super) fn count(&self, item: &str) -> u32 {
+    pub(super) fn count(&self, item: &str) -> isize {
         if !self.items.contains_key(item) {
             return 0;
         }
@@ -31,7 +31,7 @@ impl Store {
     ///
     /// Adds the specific count of item to the store.
     ///
-    pub(super) fn add(&mut self, item: &str, count: u32) {
+    pub(super) fn add(&mut self, item: &str, count: isize) {
         if !self.has(item) {
             self.items.insert(item.to_string(), count);
             return;
@@ -39,9 +39,15 @@ impl Store {
         *self.items.get_mut(item).unwrap() += count;
     }
     ///
+    /// Sets the specific count of item to the store.
+    ///
+    pub(super) fn set(&mut self, item: &str, count: isize) {
+        self.items.insert(item.to_string(), count);
+    }
+    ///
     /// Takes items from the store. Returns the number of items which was taken.
     ///
-    pub(super) fn take(&mut self, item: &str, count: u32) -> u32 {
+    pub(super) fn take(&mut self, item: &str, count: isize) -> isize {
         let store_count = self.count(item);
 
         // Check if store does not have any of the item.
@@ -58,6 +64,18 @@ impl Store {
         // Else take only what store has to offer
         *self.items.get_mut(item).unwrap() -= store_count;
         store_count
+    }
+    ///
+    /// Clear all items from the store.
+    ///
+    pub(super) fn clear(&mut self) {
+        self.items.clear();
+    }
+    ///
+    /// Get a list of all item kinds in the store.
+    ///
+    pub(super) fn get_item_kinds(&self) -> Vec<&String> {
+        self.items.keys().collect()
     }
 }
 
@@ -102,6 +120,25 @@ mod tests {
     }
 
     #[test]
+    fn set() {
+        let mut store = Store::new();
+        assert!(!store.has("Apple"));
+        assert!(!store.has("Orange"));
+        assert!(!store.has("Banana"));
+
+        store.add("Apple", 3);
+        store.add("Orange", 1);
+        store.add("Banana", 1);
+        store.set("Apple", 0);
+        store.set("Banana", 5);
+
+        assert!(!store.has("Apple"));
+        assert!(store.has("Orange"));
+        assert!(store.has("Banana"));
+        assert!(!store.has("Steak"));
+    }
+
+    #[test]
     fn take() {
         let mut store = Store::new();
         store.add("Apple", 3);
@@ -120,5 +157,30 @@ mod tests {
         let taken_grapes = store.take("Grape", 5);
         assert_eq!(taken_grapes, 0);
         assert!(!store.has("Grape"));
+    }
+
+    #[test]
+    fn clear() {
+        let mut store = Store::new();
+        store.add("Apple", 3);
+        store.add("Orange", 1);
+        store.add("Banana", 0);
+        assert!(store.has("Apple"));
+        assert!(store.has("Orange"));
+        store.clear();
+        assert!(!store.has("Apple"));
+        assert!(!store.has("Orange"));
+    }
+
+    #[test]
+    fn get_item_kinds() {
+        let mut store = Store::new();
+        store.add("Apple", 3);
+        store.add("Orange", 1);
+        store.add("Banana", 0);
+        let kinds = store.get_item_kinds();
+        assert!(kinds.contains(&&"Apple".to_string()));
+        assert!(kinds.contains(&&"Orange".to_string()));
+        assert!(!kinds.contains(&&"Banana".to_string()));
     }
 }

@@ -6,17 +6,17 @@ use std::{
 };
 
 pub struct Transaction {
-    from: Weak<RefCell<Account>>,
-    to: Weak<RefCell<Account>>,
-    amount: u64,
+    pub(super) from: Weak<RefCell<Account>>,
+    pub(super) to: Weak<RefCell<Account>>,
+    pub(super) amount: u64,
 }
 impl Transaction {
     pub(super) fn new(
         from: Weak<RefCell<Account>>,
         to: Weak<RefCell<Account>>,
         amount: u64,
-    ) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Transaction { from, to, amount }))
+    ) -> Rc<Self> {
+        Rc::new(Transaction { from, to, amount })
     }
 }
 impl Debug for Transaction {

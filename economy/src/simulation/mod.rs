@@ -30,14 +30,14 @@ pub fn simulate(tx: Sender<RenderableState>) {
         Actor::new("Actor_4", bank.clone()),
     ];
     for _ in 0..rng.gen_range(30..60) {
-        market.list_item(create_random_item(), rng.gen_range(10..150));
+        market.list_item(None, create_random_item(), rng.gen_range(10..150));
     }
 
     // Run Simulation
     loop {
         // Tick each actor
         for actor in actors.iter_mut() {
-            actor.tick(&mut market);
+            actor.borrow_mut().tick(&mut market);
         }
 
         // Build renderable state
