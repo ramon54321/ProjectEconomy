@@ -1,5 +1,8 @@
 use self::{item::Item, listing::Listing};
-use super::{accounting::account::Account, actor::Actor};
+use super::{
+    accounting::{account::Account, bank::Bank},
+    actor::Actor,
+};
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -121,16 +124,48 @@ impl Market {
     ///
     /// Removes the listing from the market and moves payment from buyer to seller
     ///
-    pub(super) fn buy_listing(listing: Weak<Listing>, buyer_account: &mut Account) {
-        //buyer_account.get_bank().upgrade().unwrap().borrow().
+    pub(super) fn buy_listing(
+        &mut self,
+        listing: Weak<Listing>,
+        buyer_account: Weak<RefCell<Account>>,
+    ) -> bool {
+        // Ensure valid listing
+        let listing = listing.upgrade();
+        if listing.is_none() {
+            return false;
+        }
+        let listing = listing.unwrap();
+
+        // Ensure valid seller account
+        let seller_account = listing
+            .owner
+            .clone()
+            .and_then(|owner| owner.upgrade())
+            .and_then(|owner| Some(owner.borrow().get_account()));
+        if seller_account.is_none() {
+            return false;
+        }
+        let seller_account = seller_account.unwrap();
+
+        // Process transation in applicable direction
+        let amount = listing.price;
+        if amount >= 0 {
+            Bank::process_transaction(buyer_account, seller_account, amount as u64);
+        } else {
+            Bank::process_transaction(seller_account, buyer_account, -amount as u64);
+        }
+
+        // Remove listing assuming all went well
+        self.unlist_item(Rc::downgrade(&listing));
+
+        true
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::simulation::accounting::bank::Bank;
-
     use super::*;
+    use crate::simulation::accounting::bank::Bank;
     use uuid::Uuid;
 
     #[test]
@@ -267,5 +302,113 @@ mod tests {
             .clone();
         market.unlist_item(chosen_listing);
         assert_eq!(market.get_listings_of_kind("ABC").len(), 1);
+    }
+
+    #[test]
+    fn buy_listing() {
+        let bank = Bank::new("Bank");
+        let owner_a = Actor::new("A", bank.clone());
+        let owner_b = Actor::new("B", bank.clone());
+        let mut market = Market::new();
+        let _listing_a = market.list_item(
+            Some(Rc::downgrade(&owner_a)),
+            Item {
+                id: Uuid::new_v4(),
+                kind: "ABC".to_string(),
+            },
+            500,
+        );
+        let _listing_b = market.list_item(
+            Some(Rc::downgrade(&owner_b)),
+            Item {
+                id: Uuid::new_v4(),
+                kind: "ABC".to_string(),
+            },
+            750,
+        );
+        let listing_c = market.list_item(
+            Some(Rc::downgrade(&owner_a)),
+            Item {
+                id: Uuid::new_v4(),
+                kind: "DEF".to_string(),
+            },
+            250,
+        );
+        assert_eq!(market.get_listings_of_kind("DEF").len(), 1);
+        assert_eq!(market.get_listings_of_kind("ABC").len(), 2);
+        assert_eq!(
+            market
+                .listings_by_owner_id
+                .get(&owner_a.borrow().id)
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            market
+                .listings_by_owner_id
+                .get(&owner_b.borrow().id)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            owner_a
+                .borrow()
+                .get_account()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_balance(),
+            0
+        );
+        assert_eq!(
+            owner_b
+                .borrow()
+                .get_account()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_balance(),
+            0
+        );
+        market.buy_listing(listing_c, owner_b.borrow().get_account());
+        assert_eq!(market.get_listings_of_kind("DEF").len(), 0);
+        assert_eq!(
+            market
+                .listings_by_owner_id
+                .get(&owner_a.borrow().id)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            market
+                .listings_by_owner_id
+                .get(&owner_b.borrow().id)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            owner_a
+                .borrow()
+                .get_account()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_balance(),
+            250
+        );
+        assert_eq!(
+            owner_b
+                .borrow()
+                .get_account()
+                .upgrade()
+                .unwrap()
+                .borrow()
+                .get_balance(),
+            -250
+        );
     }
 }

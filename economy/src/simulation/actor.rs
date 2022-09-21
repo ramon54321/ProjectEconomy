@@ -57,6 +57,9 @@ impl Actor {
             ActionResult::Done(next_action) => self.action = next_action,
         };
     }
+    pub(super) fn get_account(&self) -> Weak<RefCell<Account>> {
+        self.account.clone()
+    }
 }
 
 impl Debug for Actor {
