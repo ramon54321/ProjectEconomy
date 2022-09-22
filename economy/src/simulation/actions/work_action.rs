@@ -1,8 +1,9 @@
-use std::collections::HashSet;
-
-use crate::simulation::store::Store;
-
 use super::{Action, ActionPayload, ActionResult};
+use crate::simulation::{
+    item_count_list::ItemCountList, market::item::Item, store::Store, task::Task,
+};
+use std::collections::HashSet;
+use uuid::Uuid;
 
 pub struct WorkAction {
     step: u8,
@@ -15,10 +16,10 @@ impl WorkAction {
 
 impl Action for WorkAction {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult {
-        let task = Task {
-            inputs: vec![("Apple".to_string(), 3)],
-            outputs: vec![("Food_Packet".to_string(), 1)],
-        };
+        //let task = Task {
+        //inputs: vec![("Apple".to_string(), 3)],
+        //outputs: vec![("Food_Packet".to_string(), 1)],
+        //};
 
         // Remove listings which no longer exist in the market
         payload
@@ -26,19 +27,46 @@ impl Action for WorkAction {
             .retain(|listing| listing.upgrade().is_some());
 
         // Update target storage
-        update_storage_target(payload.store_target, &task, 2.5);
+        update_storage_target(payload.store_target, payload.task, 2.5);
 
         // Determine how many of each item should be bought or sold
         let storage_deltas = get_storage_deltas(&payload.store_target, &payload.store_actual);
 
+        // Try to sequentially trade deltas
         for delta in storage_deltas.iter() {
-            if delta.1 > 0 {
+            let item_kind = delta.0.clone();
+            let amount = delta.1;
+            if amount > 0 {
                 // Buy
-                //let listings_available = payload.market.get_listings_of_kind(&delta.0);
-                //if let Some(listing_to_buy) = listings_available.first() {
-                //let listing_to_buy_rc = listing_to_buy.upgrade().unwrap();
-                //payload.market.unlist_item(listing_to_buy);
-                //}
+                payload
+                    .log
+                    .add_entry(&format!("Need to buy {} of {}", amount, item_kind));
+                let listings_available = payload.market.get_listings_of_kind(&item_kind);
+                if let Some(listing_to_buy) = listings_available.first() {
+                    payload
+                        .market
+                        .buy_listing(listing_to_buy.clone(), payload.account.clone());
+                }
+            } else if amount < 0 {
+                // List
+                payload
+                    .log
+                    .add_entry(&format!("Need to list {} of {}", -amount, item_kind));
+
+                // Remove the amount to list from the store
+                payload.store_actual.take(&item_kind, -amount);
+
+                // Add listing for each item to market
+                for _ in 0..-amount {
+                    payload.market.list_item(
+                        Some(payload.weak_self.clone()),
+                        Item {
+                            id: Uuid::new_v4(),
+                            kind: item_kind.clone(),
+                        },
+                        500,
+                    );
+                }
             }
         }
 
@@ -65,15 +93,10 @@ impl Action for WorkAction {
     }
 }
 
-type ItemCountList = Vec<(String, isize)>;
-
-struct Task {
-    inputs: ItemCountList,
-    outputs: ItemCountList,
-}
-
 ///
 /// Mutate the given storage_target store to contain counts which the actor should aim to obtain.
+///
+/// This strategy simply tries to store what the task needs as input multiplied by a safety factor.
 ///
 fn update_storage_target(storage_target: &mut Store, task: &Task, safety_factor: f32) {
     storage_target.clear();

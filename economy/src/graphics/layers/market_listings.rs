@@ -15,16 +15,18 @@ pub fn render_market_listings(
     let y = 15.0;
     let tab_width = 120.0;
     let tab_height = 32.0;
+    let text_padding = 15.0;
     render_tabs(canvas, meta, state, x, y, tab_width, tab_height);
 
     // Render selected tab
     let tab = state.dynamic_state.get("market_info_tab");
+    let y = y + tab_height + 25.0;
     match tab {
-        Some(x) if x == "Actors" => {}
+        Some(tab) if tab == "Actors" => {
+            render_actors(canvas, meta, state, x, y, text_padding);
+        }
         _ => {
-            let y = y + tab_height + 25.0;
             let width = 500.0;
-            let text_padding = 15.0;
             render_listings(canvas, meta, state, x, y, width, text_padding);
         }
     }
@@ -107,5 +109,36 @@ fn render_listings(
             format!("{}", count),
             paint,
         );
+    }
+}
+
+fn render_actors(
+    canvas: &mut Canvas<OpenGl>,
+    _meta: &mut Meta,
+    state: &mut PowderState,
+    x: f32,
+    y: f32,
+    text_padding: f32,
+) {
+    let indentation = 15.0;
+
+    let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
+    paint.set_font_size(14.0);
+    paint.set_font(&[state.font.unwrap()]);
+    paint.set_text_baseline(Baseline::Middle);
+    paint.set_text_align(Align::Left);
+
+    // Render chosen actor log
+    for (actor_name, actor_log) in state.renderable_state.actor_logs.iter().last() {
+        let _ = canvas.fill_text(x + text_padding, y, format!("{}", actor_name), paint);
+        for (i, entry) in actor_log.iter().enumerate() {
+            let vertical_offset = y + (i + 1) as f32 * 30.0;
+            let _ = canvas.fill_text(
+                x + text_padding + indentation,
+                vertical_offset,
+                format!("{}", entry),
+                paint,
+            );
+        }
     }
 }

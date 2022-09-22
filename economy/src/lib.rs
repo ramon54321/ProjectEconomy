@@ -7,4 +7,5 @@ pub mod simulation;
 pub struct RenderableState {
     pub actor_count: usize,
     pub listed_item_kinds: Vec<(String, usize)>,
+    pub actor_logs: Vec<(String, Vec<String>)>,
 }

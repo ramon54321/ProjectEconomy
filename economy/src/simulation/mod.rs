@@ -1,4 +1,7 @@
-use self::market::{item::Item, Market};
+use self::{
+    market::{item::Item, Market},
+    task::Task,
+};
 use crate::RenderableState;
 use accounting::bank::Bank;
 use actor::Actor;
@@ -10,9 +13,12 @@ pub mod accounting;
 pub mod actions;
 pub mod actor;
 pub mod book;
+pub mod item_count_list;
+pub mod logbook;
 pub mod market;
 pub mod recipe;
 pub mod store;
+pub mod task;
 
 ///
 /// Runs in own thread. Responsible for simulation.
@@ -23,15 +29,23 @@ pub fn simulate(tx: Sender<RenderableState>) {
     // Setup Simulation
     let mut market = Market::new();
     let bank = Bank::new("Federal Reserve");
+    let task_farmer = Task {
+        inputs: vec![],
+        outputs: vec![("Apple".to_string(), 1)],
+    };
+    let task_packer = Task {
+        inputs: vec![("Apple".to_string(), 3)],
+        outputs: vec![("FoodBox".to_string(), 1)],
+    };
     let mut actors = vec![
-        Actor::new("Actor_1", bank.clone()),
-        Actor::new("Actor_2", bank.clone()),
-        Actor::new("Actor_3", bank.clone()),
-        Actor::new("Actor_4", bank.clone()),
+        Actor::new("Actor_1", bank.clone(), task_farmer.clone()),
+        Actor::new("Actor_2", bank.clone(), task_farmer.clone()),
+        Actor::new("Actor_3", bank.clone(), task_packer.clone()),
+        Actor::new("Actor_4", bank.clone(), task_packer.clone()),
     ];
-    for _ in 0..rng.gen_range(30..60) {
-        market.list_item(None, create_random_item(), rng.gen_range(10..150));
-    }
+
+    // TODO: Render all actors and see if you can make them sell apples and buy apples and sell
+    // foodboxes
 
     // Run Simulation
     loop {
@@ -52,9 +66,16 @@ pub fn simulate(tx: Sender<RenderableState>) {
                 )
             })
             .collect::<Vec<_>>();
+
+        let actor_logs = actors
+            .iter()
+            .map(|actor| (actor.borrow().get_name(), actor.borrow().get_log()))
+            .collect::<Vec<_>>();
+
         let renderable_state = RenderableState {
             actor_count: actors.len(),
             listed_item_kinds,
+            actor_logs,
         };
 
         // Send renderable state through channel to be rendered
