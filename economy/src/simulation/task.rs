@@ -4,4 +4,5 @@ use super::item_count_list::ItemCountList;
 pub struct Task {
     pub inputs: ItemCountList,
     pub outputs: ItemCountList,
+    pub work_points: u64,
 }

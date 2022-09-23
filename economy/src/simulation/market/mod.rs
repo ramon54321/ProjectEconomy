@@ -5,7 +5,7 @@ use super::{
 };
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     rc::{Rc, Weak},
 };
 use uuid::Uuid;
@@ -17,6 +17,7 @@ pub struct Market {
     listings_by_id: HashMap<Uuid, Rc<Listing>>,
     listings_by_item_kind: HashMap<String, Vec<Weak<Listing>>>,
     listings_by_owner_id: HashMap<Uuid, Vec<Weak<Listing>>>,
+    listing_queue: VecDeque<Rc<Listing>>,
 }
 impl Market {
     pub(super) fn new() -> Self {
@@ -24,6 +25,52 @@ impl Market {
             listings_by_id: HashMap::new(),
             listings_by_item_kind: HashMap::new(),
             listings_by_owner_id: HashMap::new(),
+            listing_queue: VecDeque::new(),
+        }
+    }
+    ///
+    /// Processes all enqueued listings
+    ///
+    pub(super) fn tick(&mut self) {
+        while let Some(pending_listing) = self.listing_queue.pop_front() {
+            let uuid = pending_listing.id;
+
+            // Add main listing
+            self.listings_by_id
+                .insert(uuid.clone(), pending_listing.clone());
+
+            // Add to item kind index
+            if !self
+                .listings_by_item_kind
+                .contains_key(&pending_listing.item.kind)
+            {
+                self.listings_by_item_kind.insert(
+                    pending_listing.item.kind.clone(),
+                    vec![Rc::downgrade(&pending_listing)],
+                );
+            } else {
+                self.listings_by_item_kind
+                    .get_mut(&pending_listing.item.kind)
+                    .unwrap()
+                    .push(Rc::downgrade(&pending_listing));
+            }
+
+            // Add to owner id index
+            if let Some(owner) = pending_listing
+                .owner
+                .as_ref()
+                .and_then(|owner| owner.upgrade())
+            {
+                if !self.listings_by_owner_id.contains_key(&owner.borrow().id) {
+                    self.listings_by_owner_id
+                        .insert(owner.borrow().id, vec![Rc::downgrade(&pending_listing)]);
+                } else {
+                    self.listings_by_owner_id
+                        .get_mut(&owner.borrow().id)
+                        .unwrap()
+                        .push(Rc::downgrade(&pending_listing));
+                }
+            }
         }
     }
     ///
@@ -36,35 +83,9 @@ impl Market {
         price: i64,
     ) -> Weak<Listing> {
         let listing = Rc::new(Listing::new(owner.clone(), item.clone(), price));
-        let uuid = listing.id;
 
-        // Add main listing
-        self.listings_by_id.insert(uuid.clone(), listing.clone());
-
-        // Add to item kind index
-        if !self.listings_by_item_kind.contains_key(&item.kind) {
-            self.listings_by_item_kind
-                .insert(item.kind.clone(), vec![Rc::downgrade(&listing)]);
-        } else {
-            self.listings_by_item_kind
-                .get_mut(&item.kind)
-                .unwrap()
-                .push(Rc::downgrade(&listing));
-        }
-
-        // Add to owner id index
-        if let Some(owner) = owner {
-            let owner_id = owner.upgrade().unwrap().borrow().id;
-            if !self.listings_by_owner_id.contains_key(&owner_id) {
-                self.listings_by_owner_id
-                    .insert(owner_id.clone(), vec![Rc::downgrade(&listing)]);
-            } else {
-                self.listings_by_owner_id
-                    .get_mut(&owner_id)
-                    .unwrap()
-                    .push(Rc::downgrade(&listing));
-            }
-        }
+        // Enque listing
+        self.listing_queue.push_back(listing.clone());
 
         Rc::downgrade(&listing)
     }
@@ -155,6 +176,8 @@ impl Market {
             Bank::process_transaction(seller_account, buyer_account, -amount as u64);
         }
 
+        println!("Bought {}", listing.item.kind);
+
         // Remove listing assuming all went well
         self.unlist_item(Rc::downgrade(&listing));
 
@@ -236,11 +259,11 @@ mod tests {
     #[test]
     fn get_listings_of_owner() {
         let bank = Bank::new("Bank");
-        let owner_a = Actor::new("A", bank.clone());
-        let owner_b = Actor::new("B", bank.clone());
+        let owner_a = Actor::new("A", bank.clone(), None);
+        let owner_b = Actor::new("B", bank.clone(), None);
         let mut market = Market::new();
         market.list_item(
-            Some(Rc::downgrade(&owner_a)),
+            Some(owner_a.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "ABC".to_string(),
@@ -248,7 +271,7 @@ mod tests {
             500,
         );
         market.list_item(
-            Some(Rc::downgrade(&owner_b)),
+            Some(owner_b.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "ABC".to_string(),
@@ -256,7 +279,7 @@ mod tests {
             750,
         );
         market.list_item(
-            Some(Rc::downgrade(&owner_a)),
+            Some(owner_a.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "DEF".to_string(),
@@ -307,11 +330,11 @@ mod tests {
     #[test]
     fn buy_listing() {
         let bank = Bank::new("Bank");
-        let owner_a = Actor::new("A", bank.clone());
-        let owner_b = Actor::new("B", bank.clone());
+        let owner_a = Actor::new("A", bank.clone(), None);
+        let owner_b = Actor::new("B", bank.clone(), None);
         let mut market = Market::new();
         let _listing_a = market.list_item(
-            Some(Rc::downgrade(&owner_a)),
+            Some(owner_a.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "ABC".to_string(),
@@ -319,7 +342,7 @@ mod tests {
             500,
         );
         let _listing_b = market.list_item(
-            Some(Rc::downgrade(&owner_b)),
+            Some(owner_b.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "ABC".to_string(),
@@ -327,7 +350,7 @@ mod tests {
             750,
         );
         let listing_c = market.list_item(
-            Some(Rc::downgrade(&owner_a)),
+            Some(owner_a.borrow().id),
             Item {
                 id: Uuid::new_v4(),
                 kind: "DEF".to_string(),

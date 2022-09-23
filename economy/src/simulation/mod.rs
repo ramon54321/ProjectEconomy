@@ -32,16 +32,18 @@ pub fn simulate(tx: Sender<RenderableState>) {
     let task_farmer = Task {
         inputs: vec![],
         outputs: vec![("Apple".to_string(), 1)],
+        work_points: 10,
     };
     let task_packer = Task {
         inputs: vec![("Apple".to_string(), 3)],
         outputs: vec![("FoodBox".to_string(), 1)],
+        work_points: 14,
     };
     let mut actors = vec![
-        Actor::new("Actor_1", bank.clone(), task_farmer.clone()),
-        Actor::new("Actor_2", bank.clone(), task_farmer.clone()),
-        Actor::new("Actor_3", bank.clone(), task_packer.clone()),
-        Actor::new("Actor_4", bank.clone(), task_packer.clone()),
+        Actor::new("Actor_1_farmer", bank.clone(), Some(task_farmer.clone())),
+        Actor::new("Actor_2_farmer", bank.clone(), Some(task_farmer.clone())),
+        Actor::new("Actor_3_packer", bank.clone(), Some(task_packer.clone())),
+        Actor::new("Actor_4_packer", bank.clone(), Some(task_packer.clone())),
     ];
 
     // TODO: Render all actors and see if you can make them sell apples and buy apples and sell
@@ -49,6 +51,9 @@ pub fn simulate(tx: Sender<RenderableState>) {
 
     // Run Simulation
     loop {
+        // Tick Market
+        market.tick();
+
         // Tick each actor
         for actor in actors.iter_mut() {
             actor.borrow_mut().tick(&mut market);

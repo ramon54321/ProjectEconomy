@@ -25,10 +25,14 @@ pub struct Actor {
     store_actual: Store,
     store_target: Store,
     action: Box<dyn Action>,
-    task: Task,
+    task: Option<Task>,
 }
 impl Actor {
-    pub(super) fn new(name: &str, bank: Rc<RefCell<Bank>>, task: Task) -> Rc<RefCell<Self>> {
+    pub(super) fn new(
+        name: &str,
+        bank: Rc<RefCell<Bank>>,
+        task: Option<Task>,
+    ) -> Rc<RefCell<Self>> {
         let account = bank.borrow_mut().open_account(name);
         Rc::new_cyclic(|weak_self| {
             RefCell::new(Self {
@@ -53,8 +57,12 @@ impl Actor {
     /// with the newly returned action in preparation for the next call to this tick method.
     ///
     pub(super) fn tick(&mut self, market: &mut Market) {
+        // Clean up listings
+        self.submitted_listings
+            .retain(|listing| listing.upgrade().is_some());
+
         let action_result = self.action.tick(ActionPayload {
-            weak_self: &mut self.weak_self,
+            actor_weak: self.weak_self.clone(),
             name: &mut self.name,
             log: &mut self.log,
             account: &mut self.account,

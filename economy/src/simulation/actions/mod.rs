@@ -16,7 +16,7 @@ pub(super) enum ActionResult {
     Done(Box<dyn Action>),
 }
 pub(super) struct ActionPayload<'a> {
-    pub(super) weak_self: &'a mut Weak<RefCell<Actor>>,
+    pub(super) actor_weak: Weak<RefCell<Actor>>,
     pub(super) name: &'a mut String,
     pub(super) log: &'a mut LogBook,
     pub(super) account: &'a mut Weak<RefCell<Account>>,
@@ -25,7 +25,7 @@ pub(super) struct ActionPayload<'a> {
     pub(super) store_actual: &'a mut Store,
     pub(super) store_target: &'a mut Store,
     pub(super) market: &'a mut Market,
-    pub(super) task: &'a Task,
+    pub(super) task: &'a Option<Task>,
 }
 pub(super) trait Action {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult;

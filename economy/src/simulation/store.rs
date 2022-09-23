@@ -19,6 +19,15 @@ impl Store {
         return true;
     }
     ///
+    /// Returns true if the store contains at least the number of items.
+    ///
+    pub(super) fn has_count(&self, item: &str, count: isize) -> bool {
+        if self.count(item) < count {
+            return false;
+        }
+        return true;
+    }
+    ///
     /// Counts the number of items of type 'item' in the store. If no items have been added to the
     /// store, 0 is returned.
     ///
@@ -75,7 +84,10 @@ impl Store {
     /// Get a list of all item kinds in the store.
     ///
     pub(super) fn get_item_kinds(&self) -> Vec<&String> {
-        self.items.keys().collect()
+        self.items
+            .keys()
+            .filter(|key| self.count(key) != 0)
+            .collect()
     }
 }
 
@@ -100,6 +112,18 @@ mod tests {
         assert!(store.has("Orange"));
         assert!(!store.has("Banana"));
         assert!(!store.has("Steak"));
+    }
+
+    #[test]
+    fn has_count() {
+        let mut store = Store::new();
+        store.add("Apple", 3);
+        store.add("Orange", 1);
+        store.add("Banana", 0);
+        assert!(store.has_count("Apple", 2));
+        assert!(store.has_count("Apple", 3));
+        assert!(!store.has_count("Apple", 4));
+        assert!(!store.has_count("Banana", 1));
     }
 
     #[test]

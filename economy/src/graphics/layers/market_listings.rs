@@ -121,6 +121,7 @@ fn render_actors(
     text_padding: f32,
 ) {
     let indentation = 15.0;
+    let column_width = 240.0;
 
     let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
     paint.set_font_size(14.0);
@@ -129,12 +130,17 @@ fn render_actors(
     paint.set_text_align(Align::Left);
 
     // Render chosen actor log
-    for (actor_name, actor_log) in state.renderable_state.actor_logs.iter().last() {
-        let _ = canvas.fill_text(x + text_padding, y, format!("{}", actor_name), paint);
-        for (i, entry) in actor_log.iter().enumerate() {
-            let vertical_offset = y + (i + 1) as f32 * 30.0;
+    for (ix, (actor_name, actor_log)) in state.renderable_state.actor_logs.iter().enumerate() {
+        let _ = canvas.fill_text(
+            x + text_padding + (ix as f32) * column_width,
+            y,
+            format!("{}", actor_name),
+            paint,
+        );
+        for (iy, entry) in actor_log.iter().enumerate() {
+            let vertical_offset = y + (iy + 1) as f32 * 30.0;
             let _ = canvas.fill_text(
-                x + text_padding + indentation,
+                x + text_padding + indentation + (ix as f32) * column_width,
                 vertical_offset,
                 format!("{}", entry),
                 paint,

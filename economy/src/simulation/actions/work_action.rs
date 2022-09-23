@@ -6,20 +6,25 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 pub struct WorkAction {
-    step: u8,
+    has_used_material: bool,
+    progress_points: u64,
 }
 impl WorkAction {
     pub fn new() -> Self {
-        Self { step: 0 }
+        Self {
+            has_used_material: false,
+            progress_points: 0,
+        }
     }
 }
 
 impl Action for WorkAction {
     fn tick(&mut self, payload: ActionPayload) -> ActionResult {
-        //let task = Task {
-        //inputs: vec![("Apple".to_string(), 3)],
-        //outputs: vec![("Food_Packet".to_string(), 1)],
-        //};
+        // Break to different action if there is no longer a task
+        if payload.task.is_none() {
+            return ActionResult::InProgress;
+        }
+        let task = payload.task.clone().unwrap();
 
         // Remove listings which no longer exist in the market
         payload
@@ -27,7 +32,7 @@ impl Action for WorkAction {
             .retain(|listing| listing.upgrade().is_some());
 
         // Update target storage
-        update_storage_target(payload.store_target, payload.task, 2.5);
+        update_storage_target(payload.store_target, &task, 2.5);
 
         // Determine how many of each item should be bought or sold
         let storage_deltas = get_storage_deltas(&payload.store_target, &payload.store_actual);
@@ -43,48 +48,98 @@ impl Action for WorkAction {
                     .add_entry(&format!("Need to buy {} of {}", amount, item_kind));
                 let listings_available = payload.market.get_listings_of_kind(&item_kind);
                 if let Some(listing_to_buy) = listings_available.first() {
+                    let listing_to_buy_strong = listing_to_buy.upgrade();
+                    if listing_to_buy_strong.is_none() {
+                        continue;
+                    }
                     payload
                         .market
                         .buy_listing(listing_to_buy.clone(), payload.account.clone());
                 }
             } else if amount < 0 {
-                // List
-                payload
-                    .log
-                    .add_entry(&format!("Need to list {} of {}", -amount, item_kind));
+                // Check if actor already listed item
+                let existing_listings_for_item_kind_count = payload
+                    .submitted_listings
+                    .iter()
+                    .filter(|listing| {
+                        // Safe becaue listings are cleaned up before tick
+                        let listing = listing
+                            .upgrade()
+                            .expect("Could not upgrade listing, should be cleaned up before tick");
+                        listing.item.kind == item_kind
+                    })
+                    .count() as isize;
 
-                // Remove the amount to list from the store
-                payload.store_actual.take(&item_kind, -amount);
+                let amount_to_list = (-amount) - existing_listings_for_item_kind_count;
 
-                // Add listing for each item to market
-                for _ in 0..-amount {
-                    payload.market.list_item(
-                        Some(payload.weak_self.clone()),
-                        Item {
-                            id: Uuid::new_v4(),
-                            kind: item_kind.clone(),
-                        },
-                        500,
-                    );
+                if amount_to_list > 0 {
+                    // List
+                    payload
+                        .log
+                        .add_entry(&format!("Need to list {} of {}", amount_to_list, item_kind));
+
+                    // Remove the amount to list from the store
+                    payload.store_actual.take(&item_kind, amount_to_list);
+
+                    // Add listing for each item to market
+                    for _ in 0..amount_to_list {
+                        // List item in market
+                        let listing = payload.market.list_item(
+                            Some(payload.actor_weak.clone()),
+                            Item {
+                                id: Uuid::new_v4(),
+                                kind: item_kind.clone(),
+                            },
+                            500,
+                        );
+
+                        // Record listing on actor
+                        payload.submitted_listings.push(listing);
+                    }
                 }
             }
         }
 
-        // Collect input items
-        //let input_items = payload.store_actual.take(input, 1);
-        //if input_items == 0 {
-        //// Get market listings of required item
-        //let listings_for_input_item = payload.market.get_listings_of_kind(input.clone());
+        // Ensure material usage
+        if !self.has_used_material {
+            let has_enough_material = task
+                .inputs
+                .iter()
+                .all(|input| payload.store_actual.has_count(&input.0, input.1));
 
-        //// Purchase cheapest listing
-        //// TODO: This does not cost anything, nor does it check amount or success
-        //listings_for_input_item
-        //.first()
-        //.map(|listing| payload.market.unlist_item(listing.clone()));
-        //}
+            if !has_enough_material {
+                payload
+                    .log
+                    .add_entry(&format!("Does not have enough material yet...",));
+                return ActionResult::InProgress;
+            }
 
-        //// Produce output items
-        //payload.store_actual.add(output, 1);
+            // Remove items from storage
+            for (input_item_kind, input_item_needed_count) in task.inputs.iter() {
+                payload
+                    .store_actual
+                    .take(&input_item_kind, *input_item_needed_count);
+            }
+
+            self.has_used_material = true;
+        }
+
+        self.progress_points = self.progress_points + 4;
+        payload.log.add_entry(&format!(
+            "Working progress at {} points",
+            self.progress_points
+        ));
+
+        if self.progress_points > task.work_points {
+            // Produce output
+            for (output_item_kind, output_item_count) in task.outputs.iter() {
+                payload
+                    .store_actual
+                    .add(&output_item_kind, *output_item_count);
+            }
+
+            return ActionResult::Done(Box::new(WorkAction::new()));
+        }
 
         ActionResult::InProgress
     }
