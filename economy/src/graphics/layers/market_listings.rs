@@ -1,6 +1,9 @@
-use crate::graphics::{
-    components::{draw_button, draw_horizontal_slider},
-    PowderState,
+use crate::{
+    graphics::{
+        components::{draw_button, draw_horizontal_slider},
+        PowderState,
+    },
+    simulation::store::Store,
 };
 use femtovg::{renderer::OpenGl, Align, Baseline, Canvas, Color, LineCap, LineJoin, Paint};
 use powder::Meta;
@@ -114,7 +117,7 @@ fn render_listings(
 
 fn render_actors(
     canvas: &mut Canvas<OpenGl>,
-    _meta: &mut Meta,
+    meta: &mut Meta,
     state: &mut PowderState,
     x: f32,
     y: f32,
@@ -130,21 +133,71 @@ fn render_actors(
     paint.set_text_align(Align::Left);
 
     // Render chosen actor log
-    for (ix, (actor_name, actor_log)) in state.renderable_state.actor_logs.iter().enumerate() {
-        let _ = canvas.fill_text(
-            x + text_padding + (ix as f32) * column_width,
-            y,
-            format!("{}", actor_name),
-            paint,
-        );
+    for (ix, (actor_id, actor_name, actor_log, actor_store)) in
+        state.renderable_state.actor_info.iter().enumerate()
+    {
+        let x = x + text_padding + (ix as f32) * column_width;
+        let _ = canvas.fill_text(x, y, format!("{}", actor_name), paint);
+        let mut vertical_offset = 0.0;
         for (iy, entry) in actor_log.iter().enumerate() {
-            let vertical_offset = y + (iy + 1) as f32 * 30.0;
+            vertical_offset = y + (iy + 1) as f32 * 30.0;
             let _ = canvas.fill_text(
-                x + text_padding + indentation + (ix as f32) * column_width,
+                x + indentation,
                 vertical_offset,
                 format!("{}", entry),
                 paint,
             );
         }
+
+        render_store(
+            canvas,
+            x,
+            vertical_offset + 30.0,
+            column_width,
+            text_padding,
+            actor_store,
+        );
+    }
+}
+
+fn render_store(
+    canvas: &mut Canvas<OpenGl>,
+    x: f32,
+    y: f32,
+    width: f32,
+    text_padding: f32,
+    store: &Store,
+) {
+    let mut paint = Paint::color(Color::rgbf(1.0, 1.0, 1.0));
+    paint.set_line_cap(LineCap::Butt);
+    paint.set_line_join(LineJoin::Bevel);
+    paint.set_line_width(4.0);
+    paint.set_font_size(14.0);
+    paint.set_text_baseline(Baseline::Middle);
+
+    let maximum_count = 10;
+
+    for (i, item_kind) in store.get_item_kinds().iter().enumerate() {
+        let count = store.count(&item_kind);
+        let x = x + 64.0;
+        let vertical_offset = y + i as f32 * 30.0;
+        paint.set_text_align(Align::Right);
+        let _ = canvas.fill_text(x, vertical_offset, format!("{}", item_kind), paint);
+        draw_horizontal_slider(
+            canvas,
+            x + text_padding,
+            vertical_offset,
+            width - 128.0,
+            0.0,
+            maximum_count as f32,
+            count as f32,
+        );
+        paint.set_text_align(Align::Left);
+        let _ = canvas.fill_text(
+            x + text_padding * 2.0 + width - 128.0,
+            vertical_offset,
+            format!("{}", count),
+            paint,
+        );
     }
 }

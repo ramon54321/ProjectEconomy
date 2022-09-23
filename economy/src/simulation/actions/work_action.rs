@@ -52,9 +52,12 @@ impl Action for WorkAction {
                     if listing_to_buy_strong.is_none() {
                         continue;
                     }
-                    payload
+                    let successful_buy = payload
                         .market
                         .buy_listing(listing_to_buy.clone(), payload.account.clone());
+                    if successful_buy {
+                        payload.store_actual.add(&item_kind, 1);
+                    }
                 }
             } else if amount < 0 {
                 // Check if actor already listed item

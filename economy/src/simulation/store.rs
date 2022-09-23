@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct Store {
     items: HashMap<String, isize>,
 }
@@ -31,7 +32,7 @@ impl Store {
     /// Counts the number of items of type 'item' in the store. If no items have been added to the
     /// store, 0 is returned.
     ///
-    pub(super) fn count(&self, item: &str) -> isize {
+    pub(crate) fn count(&self, item: &str) -> isize {
         if !self.items.contains_key(item) {
             return 0;
         }
@@ -83,7 +84,7 @@ impl Store {
     ///
     /// Get a list of all item kinds in the store.
     ///
-    pub(super) fn get_item_kinds(&self) -> Vec<&String> {
+    pub(crate) fn get_item_kinds(&self) -> Vec<&String> {
         self.items
             .keys()
             .filter(|key| self.count(key) != 0)

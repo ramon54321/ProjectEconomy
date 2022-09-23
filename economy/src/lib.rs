@@ -1,5 +1,7 @@
 #![feature(is_some_with)]
 
+use simulation::store::Store;
+use uuid::Uuid;
 pub mod graphics;
 pub mod simulation;
 
@@ -7,5 +9,5 @@ pub mod simulation;
 pub struct RenderableState {
     pub actor_count: usize,
     pub listed_item_kinds: Vec<(String, usize)>,
-    pub actor_logs: Vec<(String, Vec<String>)>,
+    pub actor_info: Vec<(Uuid, String, Vec<String>, Store)>,
 }

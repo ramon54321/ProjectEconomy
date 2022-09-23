@@ -42,8 +42,10 @@ pub fn simulate(tx: Sender<RenderableState>) {
     let mut actors = vec![
         Actor::new("Actor_1_farmer", bank.clone(), Some(task_farmer.clone())),
         Actor::new("Actor_2_farmer", bank.clone(), Some(task_farmer.clone())),
-        Actor::new("Actor_3_packer", bank.clone(), Some(task_packer.clone())),
-        Actor::new("Actor_4_packer", bank.clone(), Some(task_packer.clone())),
+        Actor::new("Actor_3_farmer", bank.clone(), Some(task_farmer.clone())),
+        Actor::new("Actor_4_farmer", bank.clone(), Some(task_farmer.clone())),
+        Actor::new("Actor_5_packer", bank.clone(), Some(task_packer.clone())),
+        Actor::new("Actor_6_packer", bank.clone(), Some(task_packer.clone())),
     ];
 
     // TODO: Render all actors and see if you can make them sell apples and buy apples and sell
@@ -72,15 +74,22 @@ pub fn simulate(tx: Sender<RenderableState>) {
             })
             .collect::<Vec<_>>();
 
-        let actor_logs = actors
+        let actor_info = actors
             .iter()
-            .map(|actor| (actor.borrow().get_name(), actor.borrow().get_log()))
+            .map(|actor| {
+                (
+                    actor.borrow().id,
+                    actor.borrow().get_name(),
+                    actor.borrow().get_log(),
+                    actor.borrow().get_store_actual(),
+                )
+            })
             .collect::<Vec<_>>();
 
         let renderable_state = RenderableState {
             actor_count: actors.len(),
             listed_item_kinds,
-            actor_logs,
+            actor_info,
         };
 
         // Send renderable state through channel to be rendered

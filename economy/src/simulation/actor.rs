@@ -87,6 +87,12 @@ impl Actor {
     pub(super) fn get_log(&self) -> Vec<String> {
         self.log.get_entries()
     }
+    pub(super) fn get_store_actual(&self) -> Store {
+        self.store_actual.clone()
+    }
+    pub(super) fn get_store_target(&self) -> Store {
+        self.store_target.clone()
+    }
 }
 
 impl Debug for Actor {

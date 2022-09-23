@@ -176,8 +176,6 @@ impl Market {
             Bank::process_transaction(seller_account, buyer_account, -amount as u64);
         }
 
-        println!("Bought {}", listing.item.kind);
-
         // Remove listing assuming all went well
         self.unlist_item(Rc::downgrade(&listing));
 
